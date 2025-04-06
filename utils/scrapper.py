@@ -2,8 +2,8 @@ import re
 from bs4 import BeautifulSoup
 import requests
 
-def get_books(title):
-    page = requests.get(f"https://libgen.is/search.php?req={title}&lg_topic=libgen&open=0&view=simple&res=25&phrase=1&column=def")
+def get_books(search):
+    page = requests.get(f"https://libgen.is/search.php?req={search}&lg_topic=libgen&open=0&view=simple&res=25&phrase=1&column=def")
     soup = BeautifulSoup(page.text, "html.parser")
 
     titles = soup.find_all('a', id=True)
@@ -21,6 +21,6 @@ def get_books(title):
                 print(f"Download Link: {link['href']}")
 
 
-title = input()
-title.replace(' ', '+').strip()
-get_books(title)
+search = input()
+search.replace(' ', '+').strip()
+get_books(search)

@@ -2,9 +2,10 @@ import re
 from bs4 import BeautifulSoup
 import requests
 
-def get_books(search):
-    format_input = input("Enter file format (pdf, epub or all): ").strip().lower()
+
+def get_books(search, format_input="all"):
     page_num = 1
+    books = []
     found_any = False
 
     while True:
@@ -32,22 +33,46 @@ def get_books(search):
                     if title and author and link:
                         raw_title = title.text.strip()
                         clean_title = re.match(r"^[^\(\[\d]*", raw_title)
+
                         if clean_title:
                             clean_title = clean_title.group(0).strip()
-                            print(f"Title: {clean_title}")
-                            print(f"Author: {author}")
-                            print(f"Download Link: {link['href']}")
-                            print('-' * 50)
 
+                            book_url = link['href']
+                            cover_image, download_link = get_book_cover(book_url)
+
+                            books.append({
+                                "title": clean_title,
+                                "author": author,
+                                "link": download_link,
+                                "cover_image": cover_image
+                            })
                             books_found_on_page += 1
                             found_any = True
+
         if books_found_on_page == 0:
             break
         page_num += 1
-    if not found_any:
-        print("No books found for this search")
+
+    return books if found_any else None
 
 
-search = input("Enter title or author: ")
-search.replace(' ', '+').strip()
-get_books(search)
+def get_book_cover(book_link):
+    try:
+        responses = requests.get(book_link)
+        if responses.status_code != 200:
+            print(f"Failed to fetch book details from {book_link}. Status code: {responses.status_code}")
+            return None, None
+
+        soup = BeautifulSoup(responses.text, "html.parser")
+
+        cover_img_tag = soup.find("img", {"src": re.compile(r"cover")})
+        cover_url = "https://libgen.is" + cover_img_tag['src'] if cover_img_tag else None
+
+        download_link_tag = soup.select_one("#download h2 a")
+        direct_download_link = download_link_tag['href'] if download_link_tag else None
+
+        return cover_url, direct_download_link
+
+    except Exception as e:
+        print(f"Error fetching book details: {e}")
+        return None, None
